@@ -1,1 +1,1 @@
-from nfw import NFWModel
+from offset_nfw.nfw import NFWModel

@@ -342,19 +342,15 @@ class NFWModel(object):
         norm = self.nfw_norm(M, c, z)/rs
         return norm/(x*(1.+x)**2)
 
-    @reshape        
+    @reshape
     def Upsilon_theory(self, r, M, c, z, r0):
-        """Return an NFW Upsilon statistic from theory.  
-        
+        """Return an NFW Upsilon statistic from theory.
         The Upsilon statistics were introduced in Baldauf et al 2010 and Mandelbaum et al 2010 and
         are also called the annular differential surface density (ADSD) statistics.  They are given
         by
-        
         ..math:
-            \Upsilon(r; r_0) = \Delta\Sigma(r) - \left(\frac{r_0}{r}\right)^2 \Delta\Sigma(r_0)
-            
+            Upsilon(r; r_0) = \Delta\Sigma(r) - \left(\frac{r_0}{r}\right)^2 \Delta\Sigma(r_0)
         and remove the dependence on scales below ``r0``.
-        
         Parameters
         ----------
         r : float or iterable
@@ -374,7 +370,6 @@ class NFWModel(object):
             The concentration of the halo at the overdensity definition given at class 
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
-        
         Returns
         -------
         float or numpy.ndarray
