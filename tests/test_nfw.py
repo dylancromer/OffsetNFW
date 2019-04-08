@@ -25,9 +25,11 @@ class fake_cosmo(object):
 m_c_z_test_list = [(1E14, 4, 0.2), (1E13, 4, 0.2), (1E15, 4, 0.2),
                    (1E14, 2, 0.2), (1E14, 6, 0.2),
                    (1E14, 4, 0.05), (1E14, 4, 0.5), (1E14, 4, 4)]
+
 m_c_z_multi_test_list = [([1E14, 1E15], 4, 0.2),
                          (1E14, [2,4,6], 0.2),
                          (1E14, 4, [0.2,0.5])]
+
 cosmo = astropy.cosmology.FlatLambdaCDM(H0=100, Om0=0.3)
 
 def test_object_creation():
@@ -76,6 +78,7 @@ def test_scale_radii():
     """ Test scale radius measurement. """
     # Test against some precomputed values
     nfw_1 = offset_nfw.NFWModel(cosmo, delta=200, rho='rho_c')
+    actual_val = nfw_1.scale_radius(1e14, 4, 0.2).to(u.Mpc).value
     numpy.testing.assert_allclose(nfw_1.scale_radius(1E14, 4, 0.2).to(u.Mpc).value, 0.2120377818122246)
     numpy.testing.assert_allclose(nfw_1.scale_radius(1E15, 3, 0.2).to(u.Mpc).value, 0.609095398969911)
     numpy.testing.assert_allclose(nfw_1.scale_radius(1E13, 5, 0.2).to(u.Mpc).value, 0.07873537663340793)

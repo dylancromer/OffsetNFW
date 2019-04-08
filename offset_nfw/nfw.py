@@ -11,19 +11,17 @@ from functools import partial
 
 import astropy.units as u
 
-
-
 class NFWModel(object):
     """
     A class that generates offset NFW halo profiles.  The basic purpose of this class is to generate
     internal interpolation tables for the common NFW lensing quantities, but it includes direct
     computation of the non-miscentered versions for completeness.
-    
+
     Initializing a class is easy.  You do need a cosmology object like those created by astropy,
     since we need to know overdensities.  Once you have one:
     >>>  from offset_nfw import NFWModel
     >>>  nfw_model = NFWModel(cosmology)
-    
+
     However, this won't have any internal interpolation tables (unless you've already created them
     in the directory you're working in).  To do that, you pass:
     >>>  nfw_model = NFWModel(generate=True)
@@ -32,13 +30,13 @@ class NFWModel(object):
     Note that setting ``generate=True`` will only generate new internal interpolation tables `if
     those tables do not already exist`.  If you want to `re`generate a table, you should delete
     the table files. They all start `.saved_nfw*` and use the extension `.npy`.
-    
+
     Parameters
     ----------
     cosmology : astropy.cosmology instance
         A cosmology object that can return distances and densities for computing sigma crit and
         rho_m or rho_c.  (Technically, this doesn't have to be an astropy.cosmology instance if it
-        has the methods ``angular_diameter_distance``, ``angular_diameter_distance_z1z2``, and 
+        has the methods ``angular_diameter_distance``, ``angular_diameter_distance_z1z2``, and
         ``efunc`` (=H(z)/H0)), plus the attributes ``critical_density0`` and ``Om0``,
     dir : str
         The directory where the saved tables should be stored (will be interpreted through
@@ -54,10 +52,10 @@ class NFWModel(object):
     precision : float
         The maximum allowable fractional error, defined for some mass range and concentration TBD
     x_range : tuple
-        The min-max range of x (=r/r_s) for the interpolation table. Precision is not guaranteed for 
+        The min-max range of x (=r/r_s) for the interpolation table. Precision is not guaranteed for
         values other than the default.  [default: (0.0003, 300)]
     miscentering_range : tuple
-        The min-max range of the rescaled miscentering radius (=r_mis/r_s) for the interpolation 
+        The min-max range of the rescaled miscentering radius (=r_mis/r_s) for the interpolation
         table. Precision is not guaranteed for values other than the default.
         [default: (0.0003, 300)]
     """
@@ -65,12 +63,12 @@ class NFWModel(object):
         precision=0.01, x_range=(0.0003, 300), miscentering_range=(0,4), generate=False):
         if generate:
             raise NotImplementedError("NFWModel currently can't do interpolation tables!")
-            
+
         if not os.path.exists(dir):
             raise RuntimeError("Nonexistent save directory passed to NFWModel")
         self.dir = dir
 
-        if not (hasattr(cosmology, "angular_diameter_distance") and 
+        if not (hasattr(cosmology, "angular_diameter_distance") and
                 hasattr(cosmology, "angular_diameter_distance_z1z2") and
                 hasattr(cosmology, "Om")):
             raise RuntimeError("Must pass working cosmology object to NFWModel")
@@ -79,14 +77,14 @@ class NFWModel(object):
         if not rho in ['rho_c', 'rho_m']:
             raise RuntimeError("Only rho_c and rho_m currently implemented")
         self.rho = rho
-        
+
         # Ordinarily I prefer Python duck-typing, but I want to avoid the case where somebody
         # passes "comoving='physical'" and gets comoving coordinates instead because
         # `if 'physical'` evaluates to True!
         if not isinstance(comoving, bool):
             raise RuntimeError("comoving must be True or False")
         self.comoving = comoving
-        
+
         try:
             float(delta)
         except:
@@ -94,7 +92,7 @@ class NFWModel(object):
         if not delta>0:
             raise RuntimeError("Delta<=0 is not physically sensible")
         self.delta = delta
-        
+
         try:
             float(precision)
         except:
@@ -102,7 +100,7 @@ class NFWModel(object):
         if not precision>0:
             raise RuntimeError("Precision must be greater than 0")
         self.precision = precision
-        
+
         if not hasattr(x_range, '__iter__'):
             raise RuntimeError("X range must be a length-2 tuple")
         x_range = numpy.asarray(x_range)
@@ -123,41 +121,46 @@ class NFWModel(object):
         except:
             raise RuntimeError("Miscentering range must be composed of real numbers")
         self.miscentering_range = miscentering_range
-        
+
         # Useful quantity in scaling profiles
         self._rmod = (3./(4.*numpy.pi)/self.delta)**0.33333333
-        
+
         if hasattr(self.cosmology, 'sigma_crit_inverse'):
             self.sigma_crit_inverse = self.cosmology.sigma_crit_inverse
         else:
             from functools import partial
             from .cosmology import sigma_crit_inverse
             self.sigma_crit_inverse = partial(sigma_crit_inverse, self.cosmology)
-            
-    # Per Brainerd and Wright (arXiv:), these are the analytic descriptions of the 
+
+    # Per Brainerd and Wright (arXiv:), these are the analytic descriptions of the
     # NFW lensing profiles.
     def _deltasigmalt(self,x):
         return (8.*numpy.arctanh(numpy.sqrt((1.-x)/(1.+x)))/(x*x*numpy.sqrt(1.-x*x))+
             4./(x*x)*numpy.log(x/2.)-2./(x*x-1.)+
             4.*numpy.arctanh(numpy.sqrt((1.-x)/(1.+x)))/((x*x-1.)*numpy.sqrt(1.-x*x)))
+
     def _deltasigmaeq(self,x):
         return 10./3.+4.*numpy.log(0.5)
+
     def _deltasigmagt(self,x):
         return (8.*numpy.arctan(numpy.sqrt((x-1.)/(1.+x)))/(x*x*numpy.sqrt(x*x-1.)) +
             4./(x*x)*numpy.log(x/2.)-2./(x*x-1.)+
             4.*numpy.arctan(numpy.sqrt((x-1.)/(1.+x)))/(pow((x*x-1.),1.5)))
+
     def _sigmalt(self,x):
         return 2./(x*x-1.)*(1.-2./numpy.sqrt(1.-x*x)*numpy.arctanh(numpy.sqrt((1.-x)/(1.+x))))
+
     def _sigmaeq(self,x):
         return 2./3.
+
     def _sigmagt(self,x):
         return 2./(x*x-1.)*(1.-2./numpy.sqrt(x*x-1.)*numpy.arctan(numpy.sqrt((x-1.)/(1.+x))))
 
     def _filename(self):
         return ''
-        
+
     def sigma_to_deltasigma(self, r, sigma):
-        """central_value is default 0; central_value = [something floating-point] will be used; 
+        """central_value is default 0; central_value = [something floating-point] will be used;
         central_value = 'interp' will use the innermost value of sigma.  central_value must have same
         units as sigma, if given explicitly."""
         if hasattr(r, 'unit'):
@@ -173,10 +176,10 @@ class NFWModel(object):
         sigma_r = 2*numpy.pi*r*sigma
         sum_sigma = scipy.integrate.cumtrapz(sigma_r, r, initial=0)*sigma_unit*r_unit**2
         sum_area = numpy.pi*(r**2-r[0]**2)*r_unit**2
-        
+
         deltasigma = sum_sigma/sum_area - sigma*sigma_unit
         return deltasigma
-        
+
     def reference_density(self, z):
         """Return the reference density for this halo: that is, critical density for rho_c,
            or matter density for rho_m, properly in comoving or physical."""
@@ -211,7 +214,7 @@ class NFWModel(object):
     @reshape
     def deltasigma_theory(self, r, M, c, z):
         """Return an NFW delta sigma from theory.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -225,13 +228,13 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         z : float or iterable
             The redshift of the halo.  If this is an iterable, all other non-r parameters must be
             either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -246,7 +249,7 @@ class NFWModel(object):
         if not isinstance(r, u.Quantity):
             r = r*u.Mpc
         x = numpy.atleast_1d((r/rs).decompose().value)
-        
+
         norm = self.nfw_norm(M, c, z)
         return_vals = numpy.atleast_1d(numpy.zeros_like(x))
         ltmask = x<1
@@ -257,11 +260,11 @@ class NFWModel(object):
         return_vals[eqmask] = self._deltasigmaeq(x[eqmask])
         return_vals = norm*return_vals
         return return_vals
-        
+
     @reshape
     def sigma_theory(self, r, M, c, z):
         """Return an NFW sigma from theory.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -275,10 +278,10 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -307,7 +310,7 @@ class NFWModel(object):
     @reshape
     def rho_theory(self, r, M, c, z):
         """Return an NFW rho from theory.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -321,10 +324,10 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -367,7 +370,7 @@ class NFWModel(object):
             The redshift of the lens.  If this is an iterable, all other non-r parameters must be
             either iterables with the same length or floats.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         Returns
@@ -380,13 +383,13 @@ class NFWModel(object):
             (which of course may be only one item!), then this returns an array of shape
             ``(n1, n2, ..., nn, len(r))``.
         """
-        return (self.deltasigma_theory(r, M, c, z, skip_reformat=True) 
+        return (self.deltasigma_theory(r, M, c, z, skip_reformat=True)
                     - (r0/r)**2*self.deltasigma_theory(r0, M, c, z, skip_reformat=True))
 
     @reshape_multisource
     def gamma_theory(self, r, M, c, z_lens, z_source, z_source_pdf=None):
         """Return an NFW tangential shear from theory.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -400,10 +403,10 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -421,7 +424,7 @@ class NFWModel(object):
     @reshape_multisource
     def kappa_theory(self, r, M, c, z_lens, z_source, z_source_pdf=None):
         """Return an NFW convergence from theory.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -435,10 +438,10 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -456,7 +459,7 @@ class NFWModel(object):
     @reshape_multisource
     def g_theory(self, r, M, c, z_lens, z_source, z_source_pdf=None):
         """Return an NFW reduced shear from theory.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -470,10 +473,10 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -490,7 +493,7 @@ class NFWModel(object):
     @reshape
     def deltasigma(self, r, M, c, r_mis):
         """Return an optionally miscentered NFW delta sigma from an internal interpolation table.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -504,7 +507,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -514,7 +517,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -530,7 +533,7 @@ class NFWModel(object):
     @reshape
     def sigma(self, r, M, c, r_mis):
         """Return an optionally miscentered NFW sigma from an internal interpolation table.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -544,7 +547,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -554,7 +557,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -570,9 +573,9 @@ class NFWModel(object):
     @reshape
     def Upsilon(self, r, M, c, r0, r_mis):
         """Return an optionally miscentered NFW Upsilon statistic from an internal interpolation table.
-        
+
         For details of the Upsilon statistic, see the documentation for :func:`Upsilon_theory`.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -586,7 +589,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -596,7 +599,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -613,7 +616,7 @@ class NFWModel(object):
     def gamma(self, r, M, c, r_mis, z_lens, z_source, z_source_pdf=None):
         """Return an optionally miscentered NFW tangential shear from an internal interpolation
         table.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -627,7 +630,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -637,7 +640,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -653,7 +656,7 @@ class NFWModel(object):
     @reshape_multisource
     def kappa(self, r, M, c, r_mis, z_lens, z_source, z_source_pdf=None):
         """Return an optionally miscentered NFW convergence from an internal interpolation table.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -667,7 +670,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -677,7 +680,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -690,10 +693,10 @@ class NFWModel(object):
         """
         raise NotImplementedError("NFWModel currently can't do convergence!")
 
-    @reshape_multisource       
+    @reshape_multisource
     def g(self, r, M, c, r_mis, z_lens, z_source, z_source_pdf=None):
         """Return an optionally miscentered NFW reduced shear from an internal interpolation table.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -707,7 +710,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -717,7 +720,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -736,7 +739,7 @@ class NFWModel(object):
         miscentering takes the form of a Rayleigh (2d Gaussian) distribution plus a delta function:
         fraction `0<P_cen<1` of the halos have correct centers, while the ones which are miscentered
         have a Rayleigh distribution with width r_mis.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -750,7 +753,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -760,7 +763,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -780,7 +783,7 @@ class NFWModel(object):
         miscentering takes the form of a Rayleigh (2d Gaussian) distribution plus a delta function:
         fraction `0<P_cen<1` of the halos have correct centers, while the ones which are miscentered
         have a Rayleigh distribution with width r_mis.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -794,7 +797,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -804,7 +807,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -823,9 +826,9 @@ class NFWModel(object):
         miscentering takes the form of a Rayleigh (2d Gaussian) distribution plus a delta function:
         fraction `0<P_cen<1` of the halos have correct centers, while the ones which are miscentered
         have a Rayleigh distribution with width r_mis.
-        
+
         For details of the Upsilon statistic, see the documentation for :func:`Upsilon_theory`.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -839,7 +842,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -849,7 +852,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -869,7 +872,7 @@ class NFWModel(object):
         miscentering takes the form of a Rayleigh (2d Gaussian) distribution plus a delta function:
         fraction `0<P_cen<1` of the halos have correct centers, while the ones which are miscentered
         have a Rayleigh distribution with width r_mis.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -883,7 +886,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -893,7 +896,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -907,13 +910,13 @@ class NFWModel(object):
         raise NotImplementedError("NFWModel currently can't do tangential shear with Rayleigh "+
                 "distributions!")
 
-    @reshape_multisource    
+    @reshape_multisource
     def kappa_Rayleigh(self, r, M, c, r_mis, P_cen, z_lens, z_source, z_source_pdf=None):
         """Return an NFW convergence from an internal interpolation table, assuming that the
         miscentering takes the form of a Rayleigh (2d Gaussian) distribution plus a delta function:
         fraction `0<P_cen<1` of the halos have correct centers, while the ones which are miscentered
         have a Rayleigh distribution with width r_mis.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -927,7 +930,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -937,7 +940,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray
@@ -950,14 +953,14 @@ class NFWModel(object):
         """
         raise NotImplementedError("NFWModel currently can't do convergence with Rayleigh "+
                 "distributions!")
-    
+
     @reshape_multisource
     def g_Rayleigh(self, r, M, c, r_mis, P_cen, z_lens, z_source, z_source_pdf=None):
         """Return an NFW reduced shear from an internal interpolation table, assuming that the
         miscentering takes the form of a Rayleigh (2d Gaussian) distribution plus a delta function:
         fraction `0<P_cen<1` of the halos have correct centers, while the ones which are miscentered
         have a Rayleigh distribution with width r_mis.
-        
+
         Parameters
         ----------
         r : float or iterable
@@ -971,7 +974,7 @@ class NFWModel(object):
             length or floats. This can be an object with astropy units of mass; if not it is assumed
             to be in h Msun.
         c : float or iterable
-            The concentration of the halo at the overdensity definition given at class 
+            The concentration of the halo at the overdensity definition given at class
             initialization.  If this is an iterable, all other non-r parameters must be either
             iterables with the same length or floats.
         r_mis : float or iterable
@@ -981,7 +984,7 @@ class NFWModel(object):
             object should be replicated here.  This can be an object with astropy units of length;
             if not it is assumed to be in Mpc/h.  If this is an iterable, all other non-r parameters
             must be either iterables with the same length or floats.
-        
+
         Returns
         -------
         float or numpy.ndarray

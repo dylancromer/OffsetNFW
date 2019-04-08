@@ -32,8 +32,8 @@ def _form_iterables(*args):
     return (r,)+tuple(args)
 
 def _form_iterables_multisource(nargs, *args):
-    """ Make input arrays broadcastable in the way we want, in the case where we have source 
-    redshifts to contend with.  Argument nargs is the number of args passed to func; this is 
+    """ Make input arrays broadcastable in the way we want, in the case where we have source
+    redshifts to contend with.  Argument nargs is the number of args passed to func; this is
     assumed to INCLUDE a self argument that won't get passed to this decorator."""
     original_args = args
     r = args[0]
@@ -68,7 +68,7 @@ def _form_iterables_multisource(nargs, *args):
     if len(set(obj_shapes))>1:
         raise RuntimeError("All iterable non-r parameters must have same shape")
     r = numpy.atleast_1d(r)
-    if len(r)==1 and not hasattr(original_args[0], '__iter__'): 
+    if len(r)==1 and not hasattr(original_args[0], '__iter__'):
         # Okay. So r is a scalar, but not the other arguments. That means we need an extra axis
         # ONLY for the source_z array.
         return (r[0],)+tuple(args)+(z_source[:, numpy.newaxis],)
@@ -82,7 +82,7 @@ def _form_iterables_multisource(nargs, *args):
 
 def reshape(func):
     """This is a decorator to handle reforming input vectors into something broadcastable for easy
-    multiplication or interpolation table calls.  Arrays can generally be arbitrary shapes.  
+    multiplication or interpolation table calls.  Arrays can generally be arbitrary shapes.
     Pass the kwarg 'skip_reformat' to skip this process (mainly
     used for OffsetNFW object methods that reference other methods)."""
     def wrap_shapes(self, *args, **kwargs):
@@ -97,7 +97,7 @@ def reshape(func):
 
 def reshape_multisource(func):
     """This is a decorator to handle reforming input vectors into something broadcastable for easy
-    multiplication or interpolation table calls, in the case where we have a list of source 
+    multiplication or interpolation table calls, in the case where we have a list of source
     redshifts (args[-2]) and potentially source redshift pdfs (args[-1], which may be None
     to return the full array).  Arrays can generally be arbitrary shapes, but source redshift
     pdfs must be one-dimensional.  Pass the kwarg 'skip_reformat' to skip this process (mainly
