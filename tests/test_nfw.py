@@ -78,7 +78,6 @@ def test_scale_radii():
     """ Test scale radius measurement. """
     # Test against some precomputed values
     nfw_1 = offset_nfw.NFWModel(cosmo, delta=200, rho='rho_c')
-    actual_val = nfw_1.scale_radius(1e14, 4, 0.2).to(u.Mpc).value
     numpy.testing.assert_allclose(nfw_1.scale_radius(1E14, 4, 0.2).to(u.Mpc).value, 0.2120377818122246)
     numpy.testing.assert_allclose(nfw_1.scale_radius(1E15, 3, 0.2).to(u.Mpc).value, 0.609095398969911)
     numpy.testing.assert_allclose(nfw_1.scale_radius(1E13, 5, 0.2).to(u.Mpc).value, 0.07873537663340793)

@@ -1,4 +1,5 @@
-import numpy
+import numpy as np
+import scipy.integrate
 import scipy.interpolate
 import os
 from .utils import reshape, reshape_multisource
@@ -103,27 +104,27 @@ class NFWModel(object):
 
         if not hasattr(x_range, '__iter__'):
             raise RuntimeError("X range must be a length-2 tuple")
-        x_range = numpy.asarray(x_range)
-        if numpy.product(x_range.shape)!=2 or len(x_range)!=2:
+        x_range = np.asarray(x_range)
+        if np.product(x_range.shape)!=2 or len(x_range)!=2:
             raise RuntimeError("X range must be a length-2 tuple")
         try:
-            numpy.array(x_range, dtype=float)
+            np.array(x_range, dtype=float)
         except:
             raise RuntimeError("X range must be composed of real numbers")
         self.x_range = x_range
         if not hasattr(miscentering_range, '__iter__'):
             raise RuntimeError("miscentering range must be a length-2 tuple")
-        miscentering_range = numpy.asarray(miscentering_range)
-        if numpy.product(miscentering_range.shape)!=2 or len(miscentering_range)!=2:
+        miscentering_range = np.asarray(miscentering_range)
+        if np.product(miscentering_range.shape)!=2 or len(miscentering_range)!=2:
             raise RuntimeError("miscentering range must be a length-2 tuple")
         try:
-            numpy.array(miscentering_range, dtype=float)
+            np.array(miscentering_range, dtype=float)
         except:
             raise RuntimeError("Miscentering range must be composed of real numbers")
         self.miscentering_range = miscentering_range
 
         # Useful quantity in scaling profiles
-        self._rmod = (3./(4.*numpy.pi)/self.delta)**0.33333333
+        self._rmod = (3./(4.*np.pi)/self.delta)**0.33333333
 
         if hasattr(self.cosmology, 'sigma_crit_inverse'):
             self.sigma_crit_inverse = self.cosmology.sigma_crit_inverse
@@ -135,26 +136,26 @@ class NFWModel(object):
     # Per Brainerd and Wright (arXiv:), these are the analytic descriptions of the
     # NFW lensing profiles.
     def _deltasigmalt(self,x):
-        return (8.*numpy.arctanh(numpy.sqrt((1.-x)/(1.+x)))/(x*x*numpy.sqrt(1.-x*x))+
-            4./(x*x)*numpy.log(x/2.)-2./(x*x-1.)+
-            4.*numpy.arctanh(numpy.sqrt((1.-x)/(1.+x)))/((x*x-1.)*numpy.sqrt(1.-x*x)))
+        return (8.*np.arctanh(np.sqrt((1.-x)/(1.+x)))/(x*x*np.sqrt(1.-x*x))+
+            4./(x*x)*np.log(x/2.)-2./(x*x-1.)+
+            4.*np.arctanh(np.sqrt((1.-x)/(1.+x)))/((x*x-1.)*np.sqrt(1.-x*x)))
 
     def _deltasigmaeq(self,x):
-        return 10./3.+4.*numpy.log(0.5)
+        return 10./3.+4.*np.log(0.5)
 
     def _deltasigmagt(self,x):
-        return (8.*numpy.arctan(numpy.sqrt((x-1.)/(1.+x)))/(x*x*numpy.sqrt(x*x-1.)) +
-            4./(x*x)*numpy.log(x/2.)-2./(x*x-1.)+
-            4.*numpy.arctan(numpy.sqrt((x-1.)/(1.+x)))/(pow((x*x-1.),1.5)))
+        return (8.*np.arctan(np.sqrt((x-1.)/(1.+x)))/(x*x*np.sqrt(x*x-1.)) +
+            4./(x*x)*np.log(x/2.)-2./(x*x-1.)+
+            4.*np.arctan(np.sqrt((x-1.)/(1.+x)))/(pow((x*x-1.),1.5)))
 
     def _sigmalt(self,x):
-        return 2./(x*x-1.)*(1.-2./numpy.sqrt(1.-x*x)*numpy.arctanh(numpy.sqrt((1.-x)/(1.+x))))
+        return 2./(x*x-1.)*(1.-2./np.sqrt(1.-x*x)*np.arctanh(np.sqrt((1.-x)/(1.+x))))
 
     def _sigmaeq(self,x):
         return 2./3.
 
     def _sigmagt(self,x):
-        return 2./(x*x-1.)*(1.-2./numpy.sqrt(x*x-1.)*numpy.arctan(numpy.sqrt((x-1.)/(1.+x))))
+        return 2./(x*x-1.)*(1.-2./np.sqrt(x*x-1.)*np.arctan(np.sqrt((x-1.)/(1.+x))))
 
     def _filename(self):
         return ''
@@ -173,9 +174,9 @@ class NFWModel(object):
             sigma = sigma.value
         else:
             sigma_unit = 1
-        sigma_r = 2*numpy.pi*r*sigma
+        sigma_r = 2*np.pi*r*sigma
         sum_sigma = scipy.integrate.cumtrapz(sigma_r, r, initial=0)*sigma_unit*r_unit**2
-        sum_area = numpy.pi*(r**2-r[0]**2)*r_unit**2
+        sum_area = np.pi*(r**2-r[0]**2)*r_unit**2
 
         deltasigma = sum_sigma/sum_area - sigma*sigma_unit
         return deltasigma
@@ -207,7 +208,7 @@ class NFWModel(object):
         """ Return the normalization for delta sigma and sigma. """
         if not isinstance(M, u.Quantity):
             M = (M*u.Msun).to(u.g)
-        deltac=self.delta/3.*c*c*c/(numpy.log(1.+c)-c/(1.+c))
+        deltac=self.delta/3.*c*c*c/(np.log(1.+c)-c/(1.+c))
         rs = self.scale_radius(M, c, z)
         return rs*deltac*self.reference_density(z)
 
@@ -237,7 +238,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of delta sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -248,10 +249,10 @@ class NFWModel(object):
         rs = self.scale_radius(M, c, z)
         if not isinstance(r, u.Quantity):
             r = r*u.Mpc
-        x = numpy.atleast_1d((r/rs).decompose().value)
+        x = np.atleast_1d((r/rs).decompose().value)
 
         norm = self.nfw_norm(M, c, z)
-        return_vals = numpy.atleast_1d(numpy.zeros_like(x))
+        return_vals = np.atleast_1d(np.zeros_like(x))
         ltmask = x<1
         return_vals[ltmask] = self._deltasigmalt(x[ltmask])
         gtmask = x>1
@@ -284,7 +285,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -295,9 +296,9 @@ class NFWModel(object):
         rs = self.scale_radius(M, c, z)
         if not isinstance(r, u.Quantity):
             r = r*u.Mpc
-        x = numpy.atleast_1d((r/rs).decompose().value)
+        x = np.atleast_1d((r/rs).decompose().value)
         norm = self.nfw_norm(M, c, z)
-        return_vals = numpy.atleast_1d(numpy.zeros_like(x))
+        return_vals = np.atleast_1d(np.zeros_like(x))
         ltmask = x<1
         return_vals[ltmask] = self._sigmalt(x[ltmask])
         gtmask = x>1
@@ -330,7 +331,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -341,7 +342,7 @@ class NFWModel(object):
         rs = self.scale_radius(M, c, z)
         if not isinstance(r, u.Quantity):
             r *= u.Mpc
-        x = numpy.atleast_1d((r/rs).decompose().value)
+        x = np.atleast_1d((r/rs).decompose().value)
         norm = self.nfw_norm(M, c, z)/rs
         return norm/(x*(1.+x)**2)
 
@@ -375,7 +376,7 @@ class NFWModel(object):
             iterables with the same length or floats.
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of Upsilon at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -409,7 +410,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of delta sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -444,7 +445,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of kappa at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -479,7 +480,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of g at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -520,7 +521,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of delta sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -560,7 +561,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -602,7 +603,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of delta sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -643,7 +644,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of gamma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -683,7 +684,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of kappa at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -723,7 +724,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of g at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -766,7 +767,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of delta sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -810,7 +811,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of sigma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -855,7 +856,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of Upsilon at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -899,7 +900,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of gamma at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -943,7 +944,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of kappa at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
@@ -987,7 +988,7 @@ class NFWModel(object):
 
         Returns
         -------
-        float or numpy.ndarray
+        float or np.ndarray
             Returns the value of g at the requested parameters. If every parameter was a
             float, this is a float. If only r OR some of the non-r parameters were iterable, this is
             a 1D array with the same length as the iterable parameters.  If both r and another
